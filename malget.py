@@ -46,20 +46,21 @@ def queryVT(sampleHash):
     '''
     header = {"x-apikey":f"{VTKEY}"}
     url = f"https://www.virustotal.com/api/v3/files/{sampleHash}"
-    vtRequest = requests.get(url, headers=header).json()
+    vtRequest = requests.get(url, headers=header)
+    JSON_File = vtRequest.json()
     with open("VTResults.json", "a") as outfile:
-        json.dump(vtRequest, outfile)
+        json.dump(JSON_File, outfile)
 
 def renameSamples():
     '''
     rename the samples if we found anything on VT
     '''
     files = [ file for file in os.listdir(os.curdir) if os.path.isfile(file)]
-    with open("./VTResults.json", "rb+") as fd:
-        JSON_Data = json.dumps(json.load(fd))
+    JSON_Raw = open("./VTResults.json", "r")
+    JSON_Data = json.load(JSON_Raw)
     #JSON_Data = json.loads("VTResults.json")
     VT_Hashes = JSON_Data["data"]["attributes"]["sha1"]
-    VT_Filenames = JSON_Data["data"]["attributes"]["meaningful_name"]
+    VT_Filenames = JSON_Data["data"]["attributes"]["names"]
     filesAndHashes = dict(zip(VT_Hashes, VT_Filenames))
     print(f"Printing hashes\n{VT_Hashes}")
     print(f"Printing filenames\n{VT_Filenames}")
@@ -93,7 +94,7 @@ if __name__ == '__main__':
         grabHashes()
         print("[*] Looking up these hashes on VirusTotal")
         # slice the global variable "sha1hashes" to grab first 100
-        for hash in sha1hashes[:100]:
+        for hash in sha1hashes[:50]:
             queryVT(hash)
             sleep(.25)  # sleep to abide by VT's 4/min requests API cap
         #downloadSamples()  
