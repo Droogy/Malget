@@ -13,10 +13,11 @@ I created this originally because I was practicing creating YARA, Sigma, and Sno
 ![Screenshot](assets/screenshot.png)
 
 ## Getting Started
-
 ### Dependencies
 
 * You must have VirusTotal and Malshare API keys for this program to work
+  * [How to get VirusTotal API Key](https://support.virustotal.com/hc/en-us/articles/115002088769-Please-give-me-an-API-key)
+  * [How to get Malshare API Key](https://malshare.com/register.php)
 * Once you have the keys, place them in [apiCreds.py](apiCreds.py) and you are good to go
 * all of the libraries used in Malget are in the Python Standard Library 
 
