@@ -32,6 +32,7 @@ python3 malget.py -n 10
 * multi-thread everything
 * need more error handling
 * unit testing and profiling sessions are needed to help refactor code
+* add more magic bytes signatures and respective folders
 ## Help
 
 ```
