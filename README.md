@@ -43,4 +43,4 @@ python3 malget.py --help
 
 [@xDroogy](https://twitter.com/xDroogy)
 
-A special thanks to smelly and the [VX-Underground](https://twitter.com/vxunderground) crew for inspiration from their own malware feed :)
+A special thanks to [smelly](https://twitter.com/smelly__vx) and the [VX-Underground](https://twitter.com/vxunderground) crew for inspiration from their own malware feed :)
