@@ -3,14 +3,14 @@
 # Your own personal malware feed!
 #
 
-import argparse
-import json
+from creds import MALSHAREKEY, VTKEY
 import os
-import sys
-from time import sleep
 import requests
-from apiCreds import MALSHAREKEY, VTKEY
-
+import json
+from time import sleep
+import argparse
+import sys
+import concurrent.futures
 
 def createDir():
     '''
@@ -112,9 +112,9 @@ def classifySamples():
         ===================================
         """)
     # dictionary storing our magic bytes and associated filetype
-    magicTypes = { "pe_file": b'MZ\x90\x00', 
-        "elf_file": b'\x7fELF', 
-        "zip_file": b'PK\x03\x04' }
+    magicTypes = { "pe_file": b'\x4d\x5a\x90\x00', 
+        "elf_file": b'\x7f\x45\x4c\x46', 
+        "zip_file": b'\x50\x4b\x03\x04' }
     # make a list containing ONLY files from current directory
     files = [ file for file in os.listdir(os.curdir) if os.path.isfile(file)]
     for file in files:
@@ -159,3 +159,4 @@ if __name__ == '__main__':
     
     elif not len(sys.argv) > 1:
         print("Add --help for usage")
+
