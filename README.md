@@ -10,7 +10,7 @@ I created this originally because I was practicing creating YARA, Sigma, and Sno
 
 ## Example Output
 
-[Screenshot](assets/screenshot.png)
+![Screenshot](assets/screenshot.png)
 
 ## Getting Started
 
