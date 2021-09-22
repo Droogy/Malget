@@ -42,3 +42,5 @@ python3 malget.py --help
 ## Authors
 
 [@xDroogy](https://twitter.com/xDroogy)
+
+A special thanks to smelly and the VX-Underground crew for inspiration from their own malware feed :)
