@@ -3,14 +3,14 @@
 # Your own personal malware feed!
 #
 
-from creds import MALSHAREKEY, VTKEY
-import os
-import requests
-import json
-from time import sleep
 import argparse
+import json
+import os
 import sys
-import concurrent.futures
+from time import sleep
+import requests
+from apiCreds import MALSHAREKEY, VTKEY
+
 
 def createDir():
     '''
