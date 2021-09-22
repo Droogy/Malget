@@ -1,6 +1,6 @@
 # Malget by Droogy
 #
-# Get malware really fast
+# Your own personal malware feed!
 #
 
 from creds import MALSHAREKEY, VTKEY
@@ -8,6 +8,9 @@ import os
 import requests
 import json
 from time import sleep
+import argparse
+import sys
+import concurrent.futures
 
 def createDir():
     '''
@@ -15,20 +18,21 @@ def createDir():
     and their subsequent categories
     '''
     # handle the "FileExistsError" if the dir exists
-    folders = ["./pe_files", "./elf_files", "./zip_file", "./misc"]
+    folders = ["./pe_file", "./elf_file", "./zip_file", "./misc"]
     for folder in folders:
         try:     
-            os.mkdir(f"{folder}")
+            os.mkdir(folder)
         except OSError:
             print(f"{folder} already exists, skipping...")
             continue
 
 def grabHashes():
     '''
-    query Malshare for the last 100 samples from the feed
+    query Malshare for ALL samples from last 24h
     '''
+    # initialize sha1hashes which contains ALL hashes from last 24 hrs
     global sha1hashes
-    payload = {"api_key": f"{MALSHAREKEY}", "action": "getlist"}
+    payload = {"api_key": MALSHAREKEY, "action": "getlist"}
     r = requests.get("https://malshare.com/api.php", params=payload)
     raw_hashlist = r.text
     loadedJSON = json.loads(raw_hashlist)
@@ -36,66 +40,77 @@ def grabHashes():
 
 def downloadSamples():
     '''
-    download the samples we just queried
+    download specified amount of samples we just queried from Malshare
     ''' 
-    for hash in sha1hashes[:5]:
-        payload = {"api_key": f"{MALSHAREKEY}", "action": "getfile", "hash": f"{hash}"}
+    print("""
+        ===========================================================
+        Downloading samples from Malshare, this may take a while...
+        ===========================================================
+        """)
+    for hash in sha1hashes[:args.number]:
+        payload = {"api_key": MALSHAREKEY, "action": "getfile", "hash": hash}
         r = requests.get("https://malshare.com/api.php", params=payload)
         sample = r.content
-        with open(f"{hash}", "wb") as fh:
+        with open(hash, "wb") as fh:
             print(f"Downloading {hash}...")
             fh.write(sample)
 
-def createJSON(firstHash):
+def first4Bytes(file2read):
     '''
-    Initialize the "VTResults.json" file and populate with results from first hash
+    Returns first four hex-encoded bytes of a file
     '''
-    header = {"x-apikey":f"{VTKEY}"}
-    url = f"https://www.virustotal.com/api/v3/files/{firstHash}"
-    vtRequest = requests.get(url, headers=header)
-    with open("VTResults.json", "w") as infile:
-        json.dump(vtRequest.json(), infile)
+    with open(file2read, "rb") as fd:
+        return fd.read(4)
+
+def getKey(invalue):
+    '''
+    Returns a key when given a dictionary value
+    '''
+    for key, value in magicTypes.items():
+        if invalue == value:
+            return key
 
 def queryVT(sampleHash):
     '''
-    query VT to see if we can get names for sha1 hash passed to this function
+    query VT to see if we can get names for each sha1 hash passed to this function
     '''
-    global JSONArray
-    header = {"x-apikey":f"{VTKEY}"}
+    header = {"x-apikey":VTKEY}
     url = f"https://www.virustotal.com/api/v3/files/{sampleHash}"
     vtRequest = requests.get(url, headers=header)
     JSONData = vtRequest.json()
-    # all of our VT data will be stored in this array, memory be damned!
-    JSONArray = []
     JSONArray.append(JSONData)
 
 def renameSamples():
     '''
     rename the samples if we found anything on VT
     '''
-    # get list of only files in current directory
-    files = [ file for file in os.listdir(os.curdir) if os.path.isfile(file)]
-    # load up file for reading
-    with open("./VTResults.json", "r") as infile:
-        JSON_Data = json.load(infile)
-    # extract sha1 hashes from JSON
-    VT_Hashes = JSON_Data["data"]["attributes"]["sha1"]
-    # extract file-names from JSON
-    VT_Filenames = JSON_Data["data"]["attributes"]["names"]
-    filesAndHashes = dict(zip(VT_Hashes, VT_Filenames))
-    print(f"Printing hashes\n{VT_Hashes}")
-    print(f"Printing filenames\n{VT_Filenames}")
-    print(f"Printing files+hashes\n{filesAndHashes}")
-    """
-    for file in files:
-        if str(file) in VT_Hashes:
-            print(f"{str(file)}: Original name was {JSON_Data['sha1'].__str__()}")     
-    """
+    print("""
+        =============================
+        Attempting to name samples...
+        =============================
+        """)
+    for file in sha1hashes[:args.number]:
+        for fileQuery in JSONArray:
+            try:
+                fileName = fileQuery["data"]["attributes"]["meaningful_name"]
+                if str(file) == fileQuery["data"]["attributes"]["sha1"]:
+                    print(f"[*] {file} was identified as {fileName} ")
+                    os.rename(file, f"{fileName}")
+            except KeyError:
+                print(f"[*] {file} was not in VirusTotal results, not naming it...")
+                continue
+
 def classifySamples():
     '''
     classify the files based on their filetype and move them
     to their respective folder
     '''
+    global magicTypes
+    print("""
+        ===================================
+        Classifying samples by magic bytes
+        ===================================
+        """)
     # dictionary storing our magic bytes and associated filetype
     magicTypes = { "pe_file": b'MZ\x90\x00', 
         "elf_file": b'\x7fELF', 
@@ -107,45 +122,40 @@ def classifySamples():
             print(f"{file} is a {getKey(first4Bytes(file))}")
             os.rename(f"./{file}", f"{getKey(first4Bytes(file))}/{file}")
         else:
-            print(f"{file} is not in our magic dictionary")
-
-def first4Bytes(file2read):
-    with open(file2read, "rb") as fd:
-        return fd.read(4)
-
-def getKey(invalue):
-    for key, value in magicTypes.items():
-        if invalue == value:
-            return key
-
-    pass
+            print(f"{file} is not in our magic dictionary, moving to misc/")
+            os.rename(f"./{file}", f"misc/{file}")
 
 if __name__ == '__main__':
-    # if VT file exists, we just need to download and classify samples
-    if os.path.exists("VTResults.json"):
-        print("""
-        VirusTotal results already found...time to name and shame samples
-        """)
-        #downloadSamples()  
-        renameSamples()
-        #classifySamples()
-    # if the VT file doesn't exist, then we run all of our functions
-    else:
+    global parser
+    global JSONArray
+    # all of our VT data will be stored in this array, memory be damned!
+    JSONArray = []
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-n", "--number", type=int, help="number of samples to download")
+    args = parser.parse_args()
+    if args.number:
         print("[*] Creating directory structure")
         createDir()
         print("[*] Grabbing list of hashes from Malshare")
         grabHashes()
-        print("[*] Looking up these hashes on VirusTotal")
+        print("[*] Looking up these hashes on VirusTotal")  
         
-        #createJSON(sha1hashes[0])
-        # slice the global variable "sha1hashes" to grab first 100
-        """
-        for hash in sha1hashes[:5]:
+        # slice the global variable "sha1hashes" to grab specified number
+        for hash in sha1hashes[:args.number]:
             queryVT(hash)
             sleep(.25)  # sleep to abide by VT's 4/min requests API cap
+        
+        # debugging print statement to make sure hashes are correct
+        #print(f"Printing the hashes we found:\n{sha1hashes[:args.number]}")
+        downloadSamples()  
+        renameSamples()
+        classifySamples()
+        
         with open("VTResults.json", "w") as outfile:
             json.dump(JSONArray, outfile)
-        """
-        downloadSamples()  
-        #renameSamples()
-        #classifySamples()
+
+        with open("sampleHashes.txt", "w") as outfile:
+            outfile.write(str(sha1hashes[:args.number]))
+    
+    elif not len(sys.argv) > 1:
+        print("Add --help for usage")
