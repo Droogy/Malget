@@ -3,7 +3,7 @@
 # Your own personal malware feed!
 #
 
-from creds import MALSHAREKEY, VTKEY
+from apiCreds import MALSHAREKEY, VTKEY
 import os
 import requests
 import json
