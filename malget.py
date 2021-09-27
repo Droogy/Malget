@@ -95,7 +95,7 @@ def renameSamples():
                 fileName = fileQuery["data"]["attributes"]["meaningful_name"]
                 if str(file) == fileQuery["data"]["attributes"]["sha1"]:
                     print(f"[*] {file} was identified as {fileName} ")
-                    os.rename(file, f"{fileName}")
+                    os.replace(file, f"{fileName}")
             except KeyError:
                 print(f"[*] {file} was not in VirusTotal results, not naming it...")
                 continue
@@ -120,10 +120,10 @@ def classifySamples():
     for file in files:
         if first4Bytes(file) in magicTypes.values():
             print(f"{file} is a {getKey(first4Bytes(file))}")
-            os.rename(f"./{file}", f"{getKey(first4Bytes(file))}/{file}")
+            os.replace(f"./{file}", f"{getKey(first4Bytes(file))}/{file}")
         else:
             print(f"{file} is not in our magic dictionary, moving to misc/")
-            os.rename(f"./{file}", f"misc/{file}")
+            os.replace(f"./{file}", f"misc/{file}")
 
 if __name__ == '__main__':
     global parser
